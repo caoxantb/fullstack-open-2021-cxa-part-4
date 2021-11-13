@@ -1,0 +1,25 @@
+{
+    "name": "blog-list",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "dev": "nodemon index.js",
+        "test": "jest --verbose"
+    },
+    "author": "Xuan-An Cao",
+    "license": "ISC",
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^10.0.0",
+        "express": "^4.17.1",
+        "lodash": "^4.17.21",
+        "mongoose": "^6.0.12",
+        "morgan": "^1.10.0"
+    },
+    "devDependencies": {
+        "jest": "^27.3.1",
+        "nodemon": "^2.0.15"
+    }
+}
