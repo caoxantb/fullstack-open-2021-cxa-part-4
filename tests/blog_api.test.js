@@ -8,14 +8,6 @@ const api = supertest(app);
 
 const Blog = require("../models/blog");
 
-const token = jwt.sign(
-  { username: "caoxantb", id: "61aae622438776f3c3689387" },
-  process.env.SECRET,
-  {
-    expiresIn: 60 * 60 * 24 * 7,
-  }
-);
-
 beforeEach(async () => {
   await Blog.deleteMany({});
 
@@ -42,70 +34,93 @@ test("the unique identifier is named 'id', not '_id'", async () => {
   response.body.map((r) => expect(r.id).toBeDefined());
 });
 
-test("blog without authorization cannot be added", async () => {
-  const newBlog = {
-    title: "hi",
-    author: "whatever",
-    url: "bruh",
-    likes: 104,
-  };
+describe("posting blog", () => {
+  let authorization = "";
 
-  await api.post("/api/blogs").send(newBlog).expect(401);
+  beforeEach(async () => {
+    const newUser = {
+      username: "CXA",
+      name: "CXA",
+      password: "cxa",
+    };
+
+    await api.post("/api/users").send(newUser);
+
+    const result = await api.post("/api/login").send(newUser);
+
+    authorization = `bearer ${result.body.token}`;
+  });
+
+  test("blog without authorization cannot be added", async () => {
+    const newBlog = {
+      title: "hi",
+      author: "whatever",
+      url: "bruh",
+      likes: 104,
+    };
+
+    await api.post("/api/blogs").send(newBlog).expect(401);
+  });
+
+  test("a valid blog can be added", async () => {
+    const newBlog = {
+      title: "hi",
+      author: "whatever",
+      url: "bruh",
+      likes: 104,
+    };
+
+    await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .set("Authorization", authorization)
+      .expect(201)
+      .expect("Content-Type", /application\/json/);
+
+    const response = await api.get("/api/blogs");
+
+    const titles = response.body.map((r) => r.title);
+
+    expect(response.body).toHaveLength(helper.testBlog.length + 1);
+    expect(titles).toContain("hi");
+  });
+
+  test("default value of likes is 0 if the property is missing", async () => {
+    const newBlog = {
+      title: "hi",
+      author: "whatever",
+      url: "bruh",
+    };
+
+    await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .set("Authorization", authorization)
+      .expect(201)
+      .expect("Content-Type", /application\/json/);
+
+    const response = await api.get("/api/blogs");
+
+    expect(response.body).toHaveLength(helper.testBlog.length + 1);
+    expect(response.body[response.body.length - 1].likes).toEqual(0);
+  });
+
+  test("missing title and url", async () => {
+    const newBlog = {
+      author: "whatever",
+    };
+
+    await api
+      .post("/api/blogs")
+      .send(newBlog)
+      .set("Authorization", authorization)
+      .expect(400);
+
+    const response = await api.get("/api/blogs");
+
+    expect(response.body).toHaveLength(helper.testBlog.length);
+  });
 });
-
-test("a valid blog can be added", async () => {
-  const newBlog = {
-    title: "hi",
-    author: "whatever",
-    url: "bruh",
-    likes: 104,
-  };
-
-  await api
-    .post("/api/blogs")
-    .send(newBlog)
-    .set("Authorization", "Bearer " + token)
-    .expect(201)
-    .expect("Content-Type", /application\/json/);
-
-  const response = await api.get("/api/blogs");
-
-  const titles = response.body.map((r) => r.title);
-
-  expect(response.body).toHaveLength(helper.testBlog.length + 1);
-  expect(titles).toContain("hi");
-});
-
-// test("default value of likes is 0 if the property is missing", async () => {
-//   const newBlog = {
-//     title: "hi",
-//     author: "whatever",
-//     url: "bruh",
-//   };
-
-//   await api
-//     .post("/api/blogs")
-//     .send(newBlog)
-//     .expect(201)
-//     .expect("Content-Type", /application\/json/);
-
-//   const response = await api.get("/api/blogs");
-
-//   expect(response.body).toHaveLength(helper.testBlog.length + 1);
-//   expect(response.body[response.body.length - 1].likes).toEqual(0);
-// });
-
-// test("missing title and url", async () => {
-//   const newBlog = {
-//     author: "whatever",
-//   };
-
-//   await api.post("/api/blogs").send(newBlog).expect(400);
-
-//   const response = await api.get("/api/blogs");
-
-//   expect(response.body).toHaveLength(helper.testBlog.length);
-// });
 
 afterAll(() => {
   mongoose.connection.close();
